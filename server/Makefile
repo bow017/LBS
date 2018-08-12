@@ -3,7 +3,7 @@ SUBDIRS = grid
 
 INCLUDE = -I../ \
 
-CPPFLAGS = -Wall -fPIC $(INCLUDE) $(DEBUG_DEF) -std=c++11
+CPPFLAGS = -Wall -fPIC $(INCLUDE) $(DEBUG_DEF) -std=c++11 -g -O0
 LIBS = ../common/libcommon.a \
        ../proto/libidc.a \
        ./grid/libgrid.a \

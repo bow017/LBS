@@ -33,14 +33,14 @@ lbs_heapnode_t* lbs_nnheap_top(lbs_nnheap_t* lbs_nnheap);
 /* Pop */
 void lbs_nnheap_pop(lbs_nnheap_t* lbs_nnheap);
 
-int lbs_nnheap_parent(int index) { return (index-1)/2 }
+inline int lbs_nnheap_parent(int index) { return (index-1)/2; }
 
-int lbs_nnheap_left(int index) { return (index*2+1); }
+inline int lbs_nnheap_left(int index) { return (index*2+1); }
 
-int lbs_nnheap_right(int index) { return (index*2+2); }
+inline int lbs_nnheap_right(int index) { return (index*2+2); }
 
 /* Utility function that helps to swap two elements */
-void lbs_nnheap_swap(lbs_mov_node_t* x, lbs_mov_node_t* y)
+void lbs_nnheap_swap(lbs_heapnode_t* x, lbs_heapnode_t* y);
 
 /* Recursive function that re-min-heapify the subtree structure */
 void lbs_nnheap_MinHeapify(lbs_nnheap_t* lbs_nnheap, int i );

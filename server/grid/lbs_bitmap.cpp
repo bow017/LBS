@@ -27,7 +27,7 @@ int lbs_bitmap_setbit(lbs_bitmap_t* lbs_bitmap, uint32_t pos)
 		return -1;
 	}
 
-	bits[index]|= (0x01 << (7 - shift));
+	lbs_bitmap->bits[index]|= (0x01 << (7 - shift));
 
 	return 0;
 }
@@ -42,7 +42,7 @@ int lbs_bitmap_unsetbit(lbs_bitmap_t* lbs_bitmap, uint32_t pos)
 		return -1;
 	}
 
-	bits[index] &= ~(0x01 << (7-shift));
+	lbs_bitmap->bits[index] &= ~(0x01 << (7-shift));
 
 	return 0;
 }
@@ -52,5 +52,5 @@ int lbs_bitmap_isset(lbs_bitmap_t* lbs_bitmap, uint32_t pos)
 	int index = pos/BYTE_SIZE;
 	int shift = pos%BYTE_SIZE;
 
-	return bit[index]& (0x01 << (7-shift));
+	return lbs_bitmap->bits[index]& (0x01 << (7-shift));
 }

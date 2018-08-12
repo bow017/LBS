@@ -7,6 +7,8 @@
 
 #include "server/grid/lbs_distance.h"
 #include "server/grid/lbs_grid.h"
+#include "server/grid/lbs_heap.h"
+#include "server/grid/lbs_bitmap.h"
 
 #define LBS_LON_MIN 116
 #define LBS_LON_MAX 117
@@ -16,6 +18,7 @@
 #define LBS_ROW_NUM 200
 #define LBS_COL_NUM 100
 
+void lbs_grid_min_dist(int cell_id, double lon, double lat, double* ret);
 
 static lbs_grid_t grid;
 // 初始化网格索引
@@ -96,21 +99,19 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 	lbs_bitmap_t bitmap;
 	lbs_bitmap_init(&bitmap, grid.row_num * grid.col_num);
 
-	int query_cell_id = lbs_grid_cell_id( &grid, lbs_grid_cell_row(lat), lbs_grid_cell_col(lon) );
+	int query_cell_id = lbs_grid_cell_id( &grid, lbs_grid_cell_row(&grid, lat), lbs_grid_cell_col(&grid, lon) );
 
 	double query_cell_dist = 0;
 
-	if(lbs_nnheap_insert(&heap, nullptr, query_cell_id, FALSE, query_cell_dist))
-	{
+	if(lbs_nnheap_insert(&heap, nullptr, query_cell_id, TRUE, query_cell_dist))
 		lbs_bitmap_setbit(&bitmap, query_cell_id);
-	}
 	
-	while( lbs_nnheap_top(&grid).is_grid == TRUE )
+	while( lbs_nnheap_top(&heap)->is_grid == TRUE )
 	{
  		double ret [8] = { 0 };
 
-		auto current_id = lbs_nnheap_top(&grid).cell_id;
-		lbs_nnheap_pop(&grid);
+		auto current_id = lbs_nnheap_top(&heap)->cell_id;
+		lbs_nnheap_pop(&heap);
 
 		lbs_queue_t* head = &grid.cell[current_id].dummy_node.queue;
 
@@ -120,21 +121,22 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 
 			while( current != head )
 			{
-				auto mov_lat = (lbs_mov_node_t*)current->lat;
-				auto mov_lon = (lbs_mov_node_t*)current->lon;
+				auto mov_lat = ((lbs_mov_node_t*)current)->lat;
+				auto mov_lon = ((lbs_mov_node_t*)current)->lon;
 
-				lbs_nnheap_insert(&grid, (lbs_mov_node_t*)current, current_id, FALSE,
+				lbs_nnheap_insert(&heap, (lbs_mov_node_t*)current, current_id, FALSE,
 						lbs_distance(lon, lat, mov_lon, mov_lat));
 
 				current = current->next;
+				printf("Insert one item\n");
 			}
 		}
-		lbs_grid_min_dist( current_id, lon, lat, &ret);
+		lbs_grid_min_dist( current_id, lon, lat, (double*)ret);
 		
 		//0
 		if( lbs_bitmap_isset( &bitmap, current_id-grid.col_num-1) == FALSE )
 		{
-			if( lbs_nnheap_insert(&grid, nullptr, current_id-grid.col_num-1, TRUE, ret[0]) )
+			if( lbs_nnheap_insert(&heap, nullptr, current_id-grid.col_num-1, TRUE, ret[0]) )
 			{
 				lbs_bitmap_setbit(&bitmap, current_id-grid.col_num-1);
 			}
@@ -143,7 +145,7 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 		//1
 		if( lbs_bitmap_isset( &bitmap, current_id-grid.col_num) == FALSE )
 		{
-			if( lbs_nnheap_insert(&grid, nullptr, current_id-grid.col_num, TRUE, ret[1]) )
+			if( lbs_nnheap_insert(&heap, nullptr, current_id-grid.col_num, TRUE, ret[1]) )
 			{
 				lbs_bitmap_setbit(&bitmap, current_id-grid.col_num);
 			}
@@ -152,7 +154,7 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 		//2
 		if( lbs_bitmap_isset( &bitmap, current_id-grid.col_num+1) == FALSE )
 		{
-			if( lbs_nnheap_insert(&grid, nullptr, current_id-grid.col_num+1, TRUE, ret[2]) )
+			if( lbs_nnheap_insert(&heap, nullptr, current_id-grid.col_num+1, TRUE, ret[2]) )
 			{
 				lbs_bitmap_setbit(&bitmap, current_id-grid.col_num+1);
 			}
@@ -161,7 +163,7 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 		//3
 		if( lbs_bitmap_isset( &bitmap, current_id-1) == FALSE )
 		{
-			if( lbs_nnheap_insert(&grid, nullptr, current_id-1, TRUE, ret[3]) )
+			if( lbs_nnheap_insert(&heap, nullptr, current_id-1, TRUE, ret[3]) )
 			{
 				lbs_bitmap_setbit(&bitmap, current_id-1);
 			}
@@ -170,7 +172,7 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 		//4
 		if( lbs_bitmap_isset( &bitmap, current_id+1) == FALSE )
 		{
-			if( lbs_nnheap_insert(&grid, nullptr, current_id+1, TRUE, ret[4]) )
+			if( lbs_nnheap_insert(&heap, nullptr, current_id+1, TRUE, ret[4]) )
 			{
 				lbs_bitmap_setbit(&bitmap, current_id+1);
 			}
@@ -179,7 +181,7 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 		//5
 		if( lbs_bitmap_isset( &bitmap, current_id+grid.col_num-1) == FALSE )
 		{
-			if( lbs_nnheap_insert(&grid, nullptr, current_id+grid.col_num-1, TRUE, ret[5]) )
+			if( lbs_nnheap_insert(&heap, nullptr, current_id+grid.col_num-1, TRUE, ret[5]) )
 			{
 				lbs_bitmap_setbit(&bitmap, current_id+grid.col_num-1);
 			}
@@ -188,7 +190,7 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 		//6
 		if( lbs_bitmap_isset( &bitmap, current_id+grid.col_num) == FALSE )
 		{
-			if( lbs_nnheap_insert(&grid, nullptr, current_id+grid.col_num, TRUE, ret[6]) )
+			if( lbs_nnheap_insert(&heap, nullptr, current_id+grid.col_num, TRUE, ret[6]) )
 			{
 				lbs_bitmap_setbit(&bitmap, current_id+grid.col_num);
 			}
@@ -197,7 +199,7 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 		//7
 		if( lbs_bitmap_isset( &bitmap, current_id+grid.col_num+1) == FALSE )
 		{
-			if( lbs_nnheap_insert(&grid, nullptr, current_id+grid.col_num+1, TRUE, ret[7]) )
+			if( lbs_nnheap_insert(&heap, nullptr, current_id+grid.col_num+1, TRUE, ret[7]) )
 			{
 				lbs_bitmap_setbit(&bitmap, current_id+grid.col_num+1);
 			}
@@ -208,10 +210,10 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 
 	lbs_res_node_t* new_res = new lbs_res_node_t;	
 	
-	new_res->node->lon = temp->node->lon;
-	new_res->node->lat = temp->node->lat;
-	new_res->node->timestamp = temp->node->timestamp;
-	new_res->node->id = new_res->node->id;
+	new_res->lon = temp->node->lon;
+	new_res->lat = temp->node->lat;
+	new_res->timestamp = temp->node->timestamp;
+	new_res->id = temp->node->id;
 
 	lbs_queue_init(&new_res->queue);
 
@@ -223,26 +225,26 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out)
 	return 0;
 }
 
-void lbs_grid_min_dist(int cell_id, double lon, double lat, double** ret)
+void lbs_grid_min_dist(int cell_id, double lon, double lat, double* ret)
 {
 	int cell_row, cell_col;
 
 	lbs_grid_cell_row_col(&grid, cell_id, &cell_row, &cell_col);
 
-	double cell_min_lat = cell_row * cell_height;
-	double cell_min_lon = cell_col * cell_width;
+	double cell_min_lat = cell_row * grid.cell_height;
+	double cell_min_lon = cell_col * grid.cell_width;
 
-	double cell_max_lat = (cell_row + 1) * cell_height;
-	double cell_max_lon = (cell_col + 1) * cell_width;
+	double cell_max_lat = (cell_row + 1) * grid.cell_height;
+	double cell_max_lon = (cell_col + 1) * grid.cell_width;
 	
-	double cell_lat2 = (cell_row) * cell_height;
-	double cell_lon2 = (cell_col + 1)* cell_width;
+	double cell_lat2 = (cell_row) * grid.cell_height;
+	double cell_lon2 = (cell_col + 1)* grid.cell_width;
 
-	double cell_lat3 = (cell_row + 1)* cell_height;
-	double cell_lon3 = (cell_col) * cell_width;
+	double cell_lat3 = (cell_row + 1)* grid.cell_height;
+	double cell_lon3 = (cell_col) * grid.cell_width;
 
 	ret[0] = lbs_distance(lon, lat, cell_min_lon, cell_min_lat);
-	ret[7] = lbs_distance(lon, lat, cell_max_lon, cell_max_lat);i
+	ret[7] = lbs_distance(lon, lat, cell_max_lon, cell_max_lat);
 	
 	ret[2] = lbs_distance(lon, lat, cell_lon2, cell_lat2);
 	ret[5] = lbs_distance(lon, lat, cell_lon3, cell_lat3);
