@@ -88,9 +88,139 @@ int lbs_grid_index_range_query(double lon1, double lon2, double lat1, double lat
 }
 
 // NN查询接口[查询离lon,lat最近的出租车]
-int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out) {
-  // TODO: by student
-  return 0;
+int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out) 
+{
+	lbs_nnheap_t heap;
+	lbs_nnheap_init(&heap);
+
+	lbs_bitmap_t bitmap;
+	lbs_bitmap_init(&bitmap, grid.row_num * grid.col_num);
+
+	int query_cell_id = lbs_grid_cell_id( &grid, lbs_grid_cell_row(lat), lbs_grid_cell_col(lon) );
+
+	double query_cell_dist = 0;
+
+	if(lbs_nnheap_insert(&heap, nullptr, query_cell_id, FALSE, query_cell_dist))
+	{
+		lbs_bitmap_setbit(&bitmap, query_cell_id);
+	}
+	
+	while( lbs_nnheap_top(&grid).is_grid == TRUE )
+	{
+ 		double ret [8] = { 0 };
+
+		auto current_id = lbs_nnheap_top(&grid).cell_id;
+		lbs_nnheap_pop(&grid);
+
+		lbs_queue_t* head = &grid.cell[current_id].dummy_node.queue;
+
+		if( !(lbs_queue_empty(head)) )
+		{
+			lbs_queue_t* current = head->next;
+
+			while( current != head )
+			{
+				auto mov_lat = (lbs_mov_node_t*)current->lat;
+				auto mov_lon = (lbs_mov_node_t*)current->lon;
+
+				lbs_nnheap_insert(&grid, (lbs_mov_node_t*)current, current_id, FALSE,
+						lbs_distance(lon, lat, mov_lon, mov_lat));
+
+				current = current->next;
+			}
+		}
+		lbs_grid_min_dist( current_id, lon, lat, &ret);
+		
+		//0
+		if( lbs_bitmap_isset( &bitmap, current_id-grid.col_num-1) == FALSE )
+		{
+			if( lbs_nnheap_insert(&grid, nullptr, current_id-grid.col_num-1, TRUE, ret[0]) )
+			{
+				lbs_bitmap_setbit(&bitmap, current_id-grid.col_num-1);
+			}
+		}
+
+		//1
+		if( lbs_bitmap_isset( &bitmap, current_id-grid.col_num) == FALSE )
+		{
+			if( lbs_nnheap_insert(&grid, nullptr, current_id-grid.col_num, TRUE, ret[1]) )
+			{
+				lbs_bitmap_setbit(&bitmap, current_id-grid.col_num);
+			}
+		}
+
+		//2
+		if( lbs_bitmap_isset( &bitmap, current_id-grid.col_num+1) == FALSE )
+		{
+			if( lbs_nnheap_insert(&grid, nullptr, current_id-grid.col_num+1, TRUE, ret[2]) )
+			{
+				lbs_bitmap_setbit(&bitmap, current_id-grid.col_num+1);
+			}
+		}
+
+		//3
+		if( lbs_bitmap_isset( &bitmap, current_id-1) == FALSE )
+		{
+			if( lbs_nnheap_insert(&grid, nullptr, current_id-1, TRUE, ret[3]) )
+			{
+				lbs_bitmap_setbit(&bitmap, current_id-1);
+			}
+		}
+
+		//4
+		if( lbs_bitmap_isset( &bitmap, current_id+1) == FALSE )
+		{
+			if( lbs_nnheap_insert(&grid, nullptr, current_id+1, TRUE, ret[4]) )
+			{
+				lbs_bitmap_setbit(&bitmap, current_id+1);
+			}
+		}
+
+		//5
+		if( lbs_bitmap_isset( &bitmap, current_id+grid.col_num-1) == FALSE )
+		{
+			if( lbs_nnheap_insert(&grid, nullptr, current_id+grid.col_num-1, TRUE, ret[5]) )
+			{
+				lbs_bitmap_setbit(&bitmap, current_id+grid.col_num-1);
+			}
+		}
+
+		//6
+		if( lbs_bitmap_isset( &bitmap, current_id+grid.col_num) == FALSE )
+		{
+			if( lbs_nnheap_insert(&grid, nullptr, current_id+grid.col_num, TRUE, ret[6]) )
+			{
+				lbs_bitmap_setbit(&bitmap, current_id+grid.col_num);
+			}
+		}
+
+		//7
+		if( lbs_bitmap_isset( &bitmap, current_id+grid.col_num+1) == FALSE )
+		{
+			if( lbs_nnheap_insert(&grid, nullptr, current_id+grid.col_num+1, TRUE, ret[7]) )
+			{
+				lbs_bitmap_setbit(&bitmap, current_id+grid.col_num+1);
+			}
+		}
+	}
+
+	auto temp = lbs_nnheap_top(&heap);
+
+	lbs_res_node_t* new_res = new lbs_res_node_t;	
+	
+	new_res->node->lon = temp->node->lon;
+	new_res->node->lat = temp->node->lat;
+	new_res->node->timestamp = temp->node->timestamp;
+	new_res->node->id = new_res->node->id;
+
+	lbs_queue_init(&new_res->queue);
+
+	lbs_queue_insert_head(&(out->queue),&(new_res->queue));
+
+	lbs_bitmap_destroy(&bitmap);
+	lbs_nnheap_destroy(&heap);
+
+	return 0;
 }
 
 void lbs_grid_min_dist(int cell_id, double lon, double lat, double** ret)

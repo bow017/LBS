@@ -1,6 +1,9 @@
 #ifndef SERVER_GRID_LBS_INDEX_H_
 #define SERVER_GRID_LBS_INDEX_H_
 
+#define TRUE 1
+#define FALSE 0
+
 #include <stdint.h>
 #include <stdio.h>
 
