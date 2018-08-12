@@ -92,3 +92,34 @@ int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out) {
   // TODO: by student
   return 0;
 }
+
+void lbs_grid_min_dist(int cell_id, double lon, double lat, double** ret)
+{
+	int cell_row, cell_col;
+
+	lbs_grid_cell_row_col(&grid, cell_id, &cell_row, &cell_col);
+
+	double cell_min_lat = cell_row * cell_height;
+	double cell_min_lon = cell_col * cell_width;
+
+	double cell_max_lat = (cell_row + 1) * cell_height;
+	double cell_max_lon = (cell_col + 1) * cell_width;
+	
+	double cell_lat2 = (cell_row) * cell_height;
+	double cell_lon2 = (cell_col + 1)* cell_width;
+
+	double cell_lat3 = (cell_row + 1)* cell_height;
+	double cell_lon3 = (cell_col) * cell_width;
+
+	ret[0] = lbs_distance(lon, lat, cell_min_lon, cell_min_lat);
+	ret[7] = lbs_distance(lon, lat, cell_max_lon, cell_max_lat);i
+	
+	ret[2] = lbs_distance(lon, lat, cell_lon2, cell_lat2);
+	ret[5] = lbs_distance(lon, lat, cell_lon3, cell_lat3);
+
+	ret[1] = lbs_distance(lon, lat, lon, cell_min_lat);
+	ret[6] = lbs_distance(lon, lat, lon, cell_max_lat);
+
+	ret[3] = lbs_distance(lon, lat, cell_min_lon, lat);
+	ret[4] = lbs_distance(lon, lat, cell_max_lon, lat);
+}

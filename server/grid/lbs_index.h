@@ -27,6 +27,8 @@ extern int lbs_grid_index_range_query(double lon1, double lon2, double lat1, dou
 // NN查询接口[查询离lon,lat最近的出租车]
 extern int lbs_grid_index_nn_query(double lon, double lat, lbs_res_node_t* out);
 
+extern void lbs_grid_min_dist(int cell_id, double lon, double lat, double** ret);
+
 #ifdef __cplusplus
 }
 #endif
